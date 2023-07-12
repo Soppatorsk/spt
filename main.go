@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -14,9 +17,13 @@ import (
 const (
 	port        = ":3000"
 	redirectURI = "http://localhost:3000/callback"
+
+	generatedDir = "collages"
 )
 
 var (
+	tmpDir = "tmp"
+
 	clientID     = os.Getenv("SPOTIFY_ID")
 	clientSecret = os.Getenv("SPOTIFY_SECRET")
 	auth         = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate))
@@ -26,8 +33,19 @@ var (
 
 func main() {
 	// first start an HTTP server
+	url := auth.AuthURL(state)
+	fmt.Println(url)
+
 	http.HandleFunc("/callback", completeAuth)
+	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "public/test.html")
+		log.Println("Got request for:", r.URL.String())
+	})
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		//http.ServeFile(w, r, "public/index.html")
+		//TODO cant use %s???
+		fmt.Fprint(w, "<a href=\"", url, "\">Click here</a>")
 		log.Println("Got request for:", r.URL.String())
 	})
 	go func() {
@@ -37,35 +55,64 @@ func main() {
 		}
 	}()
 
-	url := auth.AuthURL(state)
-	fmt.Println(url)
-
 	// wait for auth to complete
 	client := <-ch
-
-	// use the client to make calls that require authorization
-	user, err := client.CurrentUser(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("You are logged in as:", user.ID)
-	fmt.Println("You are logged in as:", user.Followers.Count)
-
-	testPlaylist := "4H972R0YIOTGJdWOGLiPJJ" //TODO input
-	testTrack := "6IwSGBUjtiPsDiXPR0yTSS"    //TODO input
-	playlist, err := client.GetPlaylistTracks(context.Background(), spotify.ID(testPlaylist))
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(playlist.Endpoint)
-
-	track, err := client.GetTrack(context.Background(), spotify.ID(testTrack))
-	img := track.Album.Images[0]
-	fmt.Println(img.URL)
+	//TODO input
+	//yourPlaylist := "6qaVfh57zV2Y23B139X1Tn"
+	yourPlaylist := "5SzZRpqqpxxhpURIDgiPyZ"
+	tmpDir = tmpDir + "/" + yourPlaylist
+	os.Mkdir(tmpDir, 775)
+	generateCollage(yourPlaylist, client)
 
 }
 
+func generateCollage(playlistID string, client *spotify.Client) {
+
+	playlist, err := client.GetPlaylistItems(context.Background(), spotify.ID(playlistID))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//get track list from playlist
+	//TODO use offset big playlists
+	items := playlist.Items
+	for _, item := range items {
+		downloadImage(item.Track.Track.Album.Images[0].URL)
+	}
+
+	files, err := filepath.Glob(tmpDir + "/*")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(append(files))
+	cmd := exec.Command("montage", append(files, "-geometry", "256x256+0+0", generatedDir+"/"+playlistID+".jpg")...)
+	err = cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//TODO remove files in tmp. Cronjob?
+}
+
+func downloadImage(url string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(tmpDir + "/" + url[25:] + ".jpg")
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
 func completeAuth(w http.ResponseWriter, r *http.Request) {
+
 	tok, err := auth.Token(r.Context(), state, r)
 	if err != nil {
 		http.Error(w, "Couldn't get token", http.StatusForbidden)
@@ -78,28 +125,18 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 
 	// use the token to get an authenticated client
 	client := spotify.New(auth.Client(r.Context(), tok))
-	fmt.Fprintf(w, "Login Completed!")
+	//http.ServeFile(w, r, "public/login_complete.html")
+	fmt.Fprint(w, `
+	<html>
+		<body>
+		<form>
+  	    	<input type="text" value="Enter a playlist URL">
+   	    	<input type="submit" value="Submit">
+    	</form>
+		</body>
+	</html>	
+	`)
+	//fmt.Fprintf(w, "Login Completed!")
+
 	ch <- client
 }
-
-func printImg(w http.ResponseWriter, r *http.Request, img spotify.Image) {
-
-	fmt.Fprintf(w, "<img src=\""+img.URL+"\">")
-}
-
-/*
-func main() {
-	//Environment variables
-
-	port := ":3000"
-
-	fmt.Println(client_id + "\n" + client_secret + "\n" + "port " + port)
-	http.HandleFunc("/", helloHandler)
-	http.ListenAndServe(port, nil)
-}
-
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Hello, World!");
-}
-
-*/
