@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -59,7 +60,8 @@ func main() {
 
 	//TODO input
 	//10k list
-	yourPlaylist := "6qaVfh57zV2Y23B139X1Tn"
+	//yourPlaylist := "6qaVfh57zV2Y23B139X1Tn"
+	yourPlaylist := "6ko0RCsHny1iOJSF5hbmQ7"
 	//yourPlaylist := "3Wd692HY1qm450HUpXLDfE"
 	//small list
 	//yourPlaylist := "5SzZRpqqpxxhpURIDgiPyZ"
@@ -102,11 +104,57 @@ func generateCollage(playlistID string, client *spotify.Client) {
 		}
 
 	}
+	//removes excess images to create perfect squares
+	//TODO please rework
 
-	//TODO exclude images to create perfect x*2 square
+	wccmd := exec.Command("bash", "-c", "ls -l "+tmpDir+"/* | wc -l")
+	wcoutput, wcerr := wccmd.Output()
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// The command exited with a non-zero status code
+			errMsg := string(exitError.Stderr) // Error messages from stderr
+			log.Fatal("Command failed with error:", errMsg)
+		} else {
+			// Other types of errors
+			log.Fatal("Command execution failed:", wcerr)
+		}
+	} else {
+		fmt.Println("Command executed successfully!")
+		fmt.Println("Output:", string(wcoutput))
+	}
 
-	//TODO fun, mosaic of input image?
+	wcoutInt, err := strconv.Atoi(string(wcoutput)[:len(string(wcoutput))-1])
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
+	fmt.Println(wcoutInt)
+
+	for i := 1; i <= 100; i++ {
+		fmt.Println(i * i)
+		if (i * i) > wcoutInt {
+			n := wcoutInt - (i-1)*(i-1)
+			fmt.Println(n)
+			for j := 0; j < n; j++ {
+				//TODO this is slow and stupid
+				rmCmd := exec.Command("bash", "-c", "ls "+tmpDir+"/* | tail -n 1")
+				out, err := rmCmd.Output()
+				if err != nil {
+					fmt.Println(err)
+				} else {
+					fmt.Println(string(out))
+					err := os.Remove(string(out)[:len(string(out))-1])
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
+			}
+			break
+		}
+	}
+
+	//Create the montage/collage
 	//Note: Up the disk limit on ImageMagicks policy in /etc/ImageMagic-6/policy.xml
 	cmd := exec.Command("bash", "-c", "montage "+tmpDir+"/* -geometry +0+0 "+generatedDir+"/"+playlistID+".jpg")
 
@@ -117,7 +165,6 @@ func generateCollage(playlistID string, client *spotify.Client) {
 			errMsg := string(exitError.Stderr) // Error messages from stderr
 			log.Fatal("Command failed with error:", errMsg)
 		} else {
-			// Other types of errors
 			log.Fatal("Command execution failed:", err)
 		}
 	} else {
@@ -159,18 +206,6 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 
 	// use the token to get an authenticated client
 	client := spotify.New(auth.Client(r.Context(), tok))
-	//http.ServeFile(w, r, "public/login_complete.html")
-	fmt.Fprint(w, `
-	<html>
-		<body>
-		<form>
-  	    	<input type="text" value="Enter a playlist URL">
-   	    	<input type="submit" value="Submit">
-    	</form>
-		</body>
-	</html>	
-	`)
-	//fmt.Fprintf(w, "Login Completed!")
-
+	fmt.Fprintf(w, "Login Completed!")
 	ch <- client
 }
