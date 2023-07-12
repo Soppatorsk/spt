@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -57,9 +56,13 @@ func main() {
 
 	// wait for auth to complete
 	client := <-ch
+
 	//TODO input
-	//yourPlaylist := "6qaVfh57zV2Y23B139X1Tn"
-	yourPlaylist := "5SzZRpqqpxxhpURIDgiPyZ"
+	//10k list
+	yourPlaylist := "6qaVfh57zV2Y23B139X1Tn"
+	//yourPlaylist := "3Wd692HY1qm450HUpXLDfE"
+	//small list
+	//yourPlaylist := "5SzZRpqqpxxhpURIDgiPyZ"
 	tmpDir = tmpDir + "/" + yourPlaylist
 	os.Mkdir(tmpDir, 775)
 	generateCollage(yourPlaylist, client)
@@ -73,22 +76,53 @@ func generateCollage(playlistID string, client *spotify.Client) {
 		log.Fatal(err)
 	}
 
-	//get track list from playlist
-	//TODO use offset big playlists
-	items := playlist.Items
-	for _, item := range items {
-		downloadImage(item.Track.Track.Album.Images[0].URL)
+	for i := 0; i <= playlist.Total/100; i++ {
+		playlist, err := client.GetPlaylistItems(context.Background(), spotify.ID(playlistID), spotify.Offset(i*100))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		//get track list from playlist
+		//TODO use offset big playlists
+		items := playlist.Items
+
+		//Download imgs and ignore duplicates
+		var dl string
+		for _, item := range items {
+			dl = item.Track.Track.Album.Images[2].URL
+			_, dlErr := os.Stat(tmpDir + "/" + dl[25:] + ".jpg")
+			if dlErr == nil {
+				fmt.Println("File exists, skipping")
+			} else if os.IsNotExist(dlErr) {
+				fmt.Println("Downloading " + dl)
+				downloadImage(dl)
+			} else {
+				fmt.Println("dl Err:", dlErr)
+			}
+		}
+
 	}
 
-	files, err := filepath.Glob(tmpDir + "/*")
+	//TODO exclude images to create perfect x*2 square
+
+	//TODO fun, mosaic of input image?
+
+	//Note: Up the disk limit on ImageMagicks policy in /etc/ImageMagic-6/policy.xml
+	cmd := exec.Command("bash", "-c", "montage "+tmpDir+"/* -geometry +0+0 "+generatedDir+"/"+playlistID+".jpg")
+
+	output, err := cmd.Output()
 	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(append(files))
-	cmd := exec.Command("montage", append(files, "-geometry", "256x256+0+0", generatedDir+"/"+playlistID+".jpg")...)
-	err = cmd.Run()
-	if err != nil {
-		log.Fatal(err)
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// The command exited with a non-zero status code
+			errMsg := string(exitError.Stderr) // Error messages from stderr
+			log.Fatal("Command failed with error:", errMsg)
+		} else {
+			// Other types of errors
+			log.Fatal("Command execution failed:", err)
+		}
+	} else {
+		fmt.Println("Command executed successfully!")
+		fmt.Println("Output:", string(output))
 	}
 
 	//TODO remove files in tmp. Cronjob?
