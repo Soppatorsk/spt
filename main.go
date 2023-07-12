@@ -61,7 +61,7 @@ func main() {
 	//TODO input
 	//10k list
 	//yourPlaylist := "6qaVfh57zV2Y23B139X1Tn"
-	yourPlaylist := "6ko0RCsHny1iOJSF5hbmQ7"
+	yourPlaylist := "3okg2NywBjVFkFM9LNrWA2"
 	//yourPlaylist := "3Wd692HY1qm450HUpXLDfE"
 	//small list
 	//yourPlaylist := "5SzZRpqqpxxhpURIDgiPyZ"
@@ -89,17 +89,21 @@ func generateCollage(playlistID string, client *spotify.Client) {
 		items := playlist.Items
 
 		//Download imgs and ignore duplicates
-		var dl string
 		for _, item := range items {
-			dl = item.Track.Track.Album.Images[2].URL
-			_, dlErr := os.Stat(tmpDir + "/" + dl[25:] + ".jpg")
-			if dlErr == nil {
-				fmt.Println("File exists, skipping")
-			} else if os.IsNotExist(dlErr) {
-				fmt.Println("Downloading " + dl)
-				downloadImage(dl)
+			if len(item.Track.Track.Album.Images) > 2 {
+				dl := item.Track.Track.Album.Images[2].URL
+
+				_, dlErr := os.Stat(tmpDir + "/" + dl[25:] + ".jpg")
+				if dlErr == nil {
+					fmt.Println("File exists, skipping")
+				} else if os.IsNotExist(dlErr) {
+					fmt.Println("Downloading " + dl)
+					downloadImage(dl)
+				} else {
+					fmt.Println("dl Err:", dlErr)
+				}
 			} else {
-				fmt.Println("dl Err:", dlErr)
+				fmt.Println("Probably user local file, skipping")
 			}
 		}
 
@@ -206,6 +210,8 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 
 	// use the token to get an authenticated client
 	client := spotify.New(auth.Client(r.Context(), tok))
+
 	fmt.Fprintf(w, "Login Completed!")
+
 	ch <- client
 }
