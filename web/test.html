@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Spotify Collage Generator</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body style="background-color:#aaaaaa">
+
+</body>
+<a href="{{.URL}}" target="_blank">Auth</a>
+<br>
+test page!!
+<form method="POST" action="/test">
+    <label for="playlistID">Playlist ID:</label>
+    <input type="text" name="playlistID" id="playlistID">
+    <button type="submit">Generate Collage</button>
+</form>
+<br>
+<br>
+<br>
+    {{range .Images}}
+    <a href="{{.}}">
+        <img style="width:10vw" src="{{.}}" alt="Image">
+    </a>
+    {{end}}
+
+</html>

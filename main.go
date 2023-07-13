@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/Soppatorsk/spt/collage"
 	"github.com/zmb3/spotify/v2"
@@ -37,13 +39,22 @@ func (c *Collage) GenerateCollage() string {
 }
 
 func main() {
-
+	fmt.Println("Running...")
 	// first start an HTTP server
-	url := auth.AuthURL(state)
-	fmt.Println(url)
+	/*
+		url := auth.AuthURL(state)
+		fmt.Println(url)
+	*/
 
 	http.HandleFunc("/callback", completeAuth)
+	http.HandleFunc("/test", test)
+	http.HandleFunc("/img/", serveImage)
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "web/index.html")
+
+		log.Println("Got request for:", r.URL.String())
+	})
 	go func() {
 		err := http.ListenAndServe(port, nil)
 		if err != nil {
@@ -51,54 +62,17 @@ func main() {
 		}
 	}()
 
-	// wait for auth to complete
-	client := <-ch
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "POST" {
-			r.ParseForm()
-			playlistID := trimPlaylistLink(r.Form.Get("playlistID"))
-			fmt.Println(playlistID)
-
-			// Create a collage object
-			c := &Collage{
-				playlistID: playlistID,
-				tmpDir:     "tmp/" + playlistID,
-				client:     client,
-			}
-			go func() {
-				imgURL := c.GenerateCollage()
-				fmt.Println(imgURL)
-			}()
-		}
-
-		http.ServeFile(w, r, "web/index.html")
-
-		log.Println("Got request for:", r.URL.String())
-	})
-
-	//TODO input
-	//10k list
-	//yourPlaylist := "6qaVfh57zV2Y23B139X1Tn"
-	//yourPlaylist := "6ko0RCsHny1iOJSF5hbmQ7"
-	//small list
-	/*
-		yourPlaylist := "5SzZRpqqpxxhpURIDgiPyZ"
-
-			go func() {
-
-				img := collage.GenerateCollage(yourPlaylist, client)
-				hostname, err := os.Hostname()
-				if err != nil {
-					fmt.Println(err)
-				}
-				fmt.Println(hostname + "/" + img)
-			}()
-
-	*/
-	fmt.Println("im out lol")
+	//client := <-ch
+	//fmt.Println(client)
 	var input string
 	fmt.Scanln(&input)
+}
+
+func serveImage(w http.ResponseWriter, r *http.Request) {
+
+	imagePath := "./img/" + r.URL.Path[len("/img/"):]
+	fmt.Println(imagePath)
+	http.ServeFile(w, r, imagePath)
 }
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {
@@ -116,12 +90,60 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	// use the token to get an authenticated client
 	client := spotify.New(auth.Client(r.Context(), tok))
 
-	fmt.Fprintf(w, "Login Completed!")
+	fmt.Fprintf(w, "Login Completed! You can close this window")
 
 	ch <- client
 }
 
+func test(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		client := <-ch
+		r.ParseForm()
+		playlistID := trimPlaylistLink(r.Form.Get("playlistID"))
+		//TODO input validation
+		// Create a collage object
+		c := &Collage{
+			playlistID: playlistID,
+			tmpDir:     "tmp/" + playlistID,
+			client:     client,
+		}
+		go func() {
+			imgURL := c.GenerateCollage()
+			fmt.Println(imgURL)
+		}()
+	}
+	url := auth.AuthURL(state)
+
+	tmpl, err := template.ParseFiles("web/test.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	imageDir := "img"
+	imageFiles, err := filepath.Glob(filepath.Join(imageDir, "*.jpg")) // Change the pattern if needed
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Define the data to pass to the template
+	data := struct {
+		URL    string
+		Images []string
+	}{
+		URL:    url,
+		Images: imageFiles,
+	}
+
+	// Render the template with the data
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
 func trimPlaylistLink(link string) string {
+	fmt.Println("trim")
 	// Find the index of "/playlist/"
 	startIndex := strings.Index(link, "/playlist/") + len("/playlist/")
 	if startIndex == -1 || startIndex >= len(link) {
