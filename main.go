@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -22,7 +24,7 @@ const (
 )
 
 var (
-	tmpDir = "tmp"
+	tmpDir = "tmp" //TODO cant use /tmp?
 
 	clientID     = os.Getenv("SPOTIFY_ID")
 	clientSecret = os.Getenv("SPOTIFY_SECRET")
@@ -37,10 +39,6 @@ func main() {
 	fmt.Println(url)
 
 	http.HandleFunc("/callback", completeAuth)
-	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "public/test.html")
-		log.Println("Got request for:", r.URL.String())
-	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		//http.ServeFile(w, r, "public/index.html")
@@ -61,10 +59,11 @@ func main() {
 	//TODO input
 	//10k list
 	//yourPlaylist := "6qaVfh57zV2Y23B139X1Tn"
-	yourPlaylist := "3okg2NywBjVFkFM9LNrWA2"
-	//yourPlaylist := "3Wd692HY1qm450HUpXLDfE"
+	//yourPlaylist := "6ko0RCsHny1iOJSF5hbmQ7"
 	//small list
-	//yourPlaylist := "5SzZRpqqpxxhpURIDgiPyZ"
+	yourPlaylist := "5SzZRpqqpxxhpURIDgiPyZ"
+
+	os.Mkdir(generatedDir, 775)
 	tmpDir = tmpDir + "/" + yourPlaylist
 	os.Mkdir(tmpDir, 775)
 	generateCollage(yourPlaylist, client)
@@ -78,6 +77,7 @@ func generateCollage(playlistID string, client *spotify.Client) {
 		log.Fatal(err)
 	}
 
+	fmt.Println("Downloading images...")
 	for i := 0; i <= playlist.Total/100; i++ {
 		playlist, err := client.GetPlaylistItems(context.Background(), spotify.ID(playlistID), spotify.Offset(i*100))
 		if err != nil {
@@ -85,7 +85,6 @@ func generateCollage(playlistID string, client *spotify.Client) {
 		}
 
 		//get track list from playlist
-		//TODO use offset big playlists
 		items := playlist.Items
 
 		//Download imgs and ignore duplicates
@@ -95,7 +94,7 @@ func generateCollage(playlistID string, client *spotify.Client) {
 
 				_, dlErr := os.Stat(tmpDir + "/" + dl[25:] + ".jpg")
 				if dlErr == nil {
-					fmt.Println("File exists, skipping")
+					//
 				} else if os.IsNotExist(dlErr) {
 					fmt.Println("Downloading " + dl)
 					downloadImage(dl)
@@ -103,66 +102,49 @@ func generateCollage(playlistID string, client *spotify.Client) {
 					fmt.Println("dl Err:", dlErr)
 				}
 			} else {
-				fmt.Println("Probably user local file, skipping")
+				//fmt.Println("Probably user local file, skipping")
 			}
 		}
 
 	}
 	//removes excess images to create perfect squares
-	//TODO please rework
 
-	wccmd := exec.Command("bash", "-c", "ls -l "+tmpDir+"/* | wc -l")
-	wcoutput, wcerr := wccmd.Output()
+	fmt.Println("Calculating and fixing for perfect square...")
+
+	wcOutput, err := exec.Command("bash", "-c", "ls -l "+tmpDir+"/* | wc -l").Output()
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			// The command exited with a non-zero status code
-			errMsg := string(exitError.Stderr) // Error messages from stderr
-			log.Fatal("Command failed with error:", errMsg)
-		} else {
-			// Other types of errors
-			log.Fatal("Command execution failed:", wcerr)
-		}
-	} else {
-		fmt.Println("Command executed successfully!")
-		fmt.Println("Output:", string(wcoutput))
+		log.Fatal("Command execution failed:", err)
 	}
 
-	wcoutInt, err := strconv.Atoi(string(wcoutput)[:len(string(wcoutput))-1])
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-
-	fmt.Println(wcoutInt)
+	wcCount, err := strconv.Atoi(strings.TrimSpace(string(wcOutput)))
 
 	for i := 1; i <= 100; i++ {
-		fmt.Println(i * i)
-		if (i * i) > wcoutInt {
-			n := wcoutInt - (i-1)*(i-1)
-			fmt.Println(n)
+		if i*i > wcCount {
+			n := wcCount - (i-1)*(i-1)
 			for j := 0; j < n; j++ {
-				//TODO this is slow and stupid
-				rmCmd := exec.Command("bash", "-c", "ls "+tmpDir+"/* | tail -n 1")
-				out, err := rmCmd.Output()
+				files, err := filepath.Glob(tmpDir + "/*")
+				if err != nil || len(files) == 0 {
+					fmt.Println("Error:", err)
+					break
+				}
+				filePath := files[len(files)-1]
+				err = os.Remove(filePath)
 				if err != nil {
 					fmt.Println(err)
-				} else {
-					fmt.Println(string(out))
-					err := os.Remove(string(out)[:len(string(out))-1])
-					if err != nil {
-						fmt.Println(err)
-					}
 				}
 			}
 			break
 		}
 	}
 
+	fmt.Println("Creating collage...")
 	//Create the montage/collage
 	//Note: Up the disk limit on ImageMagicks policy in /etc/ImageMagic-6/policy.xml
-	cmd := exec.Command("bash", "-c", "montage "+tmpDir+"/* -geometry +0+0 "+generatedDir+"/"+playlistID+".jpg")
+	finalImage := generatedDir + "/" + playlistID + ".jpg"
+	cmd := exec.Command("bash", "-c", "montage "+tmpDir+"/* -geometry 64x64+0+0 "+finalImage)
 
 	output, err := cmd.Output()
+
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			// The command exited with a non-zero status code
@@ -171,12 +153,10 @@ func generateCollage(playlistID string, client *spotify.Client) {
 		} else {
 			log.Fatal("Command execution failed:", err)
 		}
-	} else {
-		fmt.Println("Command executed successfully!")
-		fmt.Println("Output:", string(output))
 	}
 
-	//TODO remove files in tmp. Cronjob?
+	fmt.Println("Command executed successfully!" + string(output))
+	fmt.Println(finalImage)
 }
 
 func downloadImage(url string) error {
