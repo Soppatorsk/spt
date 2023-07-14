@@ -17,10 +17,13 @@ import (
 
 var (
 	generatedDir = "img"
+	tmpDir       = "tmp"
 )
 
-func GenerateCollage(playlistID string, tmpDir string, client *spotify.Client) string {
+func GenerateCollage(playlistID string, client *spotify.Client) string {
 	os.Mkdir(generatedDir, 775)
+	os.Mkdir(tmpDir, 775)
+	tmpDir = tmpDir + "/" + playlistID
 	os.Mkdir(tmpDir, 775)
 
 	playlist, err := client.GetPlaylistItems(context.Background(), spotify.ID(playlistID))
