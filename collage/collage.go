@@ -96,6 +96,7 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 	//Create the montage/collage
 	//Note: Up the disk limit on ImageMagicks policy in /etc/ImageMagic-6/policy.xml
 	finalImage := generatedDir + "/" + playlistID + ".jpg"
+	fmt.Println(finalImage)
 	cmd := exec.Command("bash", "-c", "montage "+tmpDir+"/* -geometry 64x64+0+0 "+finalImage)
 
 	output, err := cmd.Output()
@@ -109,10 +110,9 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 			log.Fatal("Command execution failed:", err)
 		}
 	}
-
 	fmt.Println("Command executed successfully!" + string(output))
-	fmt.Println(finalImage)
-	return finalImage
+
+	return "/" + finalImage
 }
 
 func downloadImage(url string, tmpDir string) error {
