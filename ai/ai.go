@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -30,8 +31,8 @@ func GenerateResponse(id string, client *spotify.Client) string {
 	url := "https://api.openai.com/v1/chat/completions"
 	apiKey := os.Getenv("OPENAI_API_KEY")
 
-	instructions := "Your task is to roast the users spotify playlist, tease and make fun of user and draw far-fetched conclusions on their music taste. User will provide a playlist title and some sample artists"
-	playlistInfo := "TITLE: {TITLE} \nARTISTS: {ARTISTS}"
+	instructions := "Your task is to roast the users spotify playlist, tease and make fun of user and draw far-fetched conclusions on their music taste. User will provide a playlist title and some samples song - artist"
+	playlistInfo := "TITLE: {TITLE} \nSAMPLES: {SAMPLES}"
 
 	p, err := client.GetPlaylist(context.Background(), spotify.ID(id))
 	if err != nil {
@@ -44,14 +45,15 @@ func GenerateResponse(id string, client *spotify.Client) string {
 		log.Println(err)
 	}
 
-	artists := ""
+	samples := ""
 
 	items := pi.Items
 	for _, item := range items {
-		artists = artists + item.Track.Track.Artists[0].Name + ",\n"
+		samples = samples + item.Track.Track.Artists[0].Name + " - " + item.Track.Track.Name + ",\n"
 	}
 
-	playlistInfo = strings.Replace(playlistInfo, "{ARTISTS}", artists, 1)
+	fmt.Println(samples)
+	playlistInfo = strings.Replace(playlistInfo, "{SAMPLES}", samples, 1)
 
 	messages := []Message{
 		{Role: "system", Content: instructions},
