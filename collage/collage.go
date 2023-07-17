@@ -43,6 +43,7 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 		//Download imgs and ignore duplicates
 		for _, item := range items {
 			if len(item.Track.Track.Album.Images) > 2 {
+				//TODO on few tracks, use higher res
 				dl := item.Track.Track.Album.Images[2].URL
 
 				_, dlErr := os.Stat(tmpDir + "/" + dl[25:] + ".jpg")

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <img alt="Vue logo" src="./assets/logo.png">
+    <h1>torsk.net/spt</h1>
     <SpotifyAuth></SpotifyAuth>
     <ButtonTestVue></ButtonTestVue>
     <CreatePlaylistVue></CreatePlaylistVue>
@@ -24,12 +24,21 @@ export default {
 </script>
 
 <style>
+body {
+  background-color:rgb(20,20,20);
+  color:rgb(230,230,230)
+}
+
+a {
+  color:rgb(230,230,230)
+}
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #2c3e50;
   margin-top: 60px;
+
 }
 </style>

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Soppatorsk/spt/ai"
 	"github.com/Soppatorsk/spt/collage"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
@@ -37,20 +39,12 @@ type RequestData struct {
 	Token string `json:"token"`
 }
 
-// TODO use RequestData instead, very close
-type Collage struct {
-	playlistID string
-	client     *spotify.Client
-}
-
-func (c *Collage) GenerateCollage() string {
-	img := collage.GenerateCollage(c.playlistID, c.client)
-	return img
-}
-
 type playlist struct {
 	ID         string `json:"id"`
+	Name       string `json:"name"`
+	User       string `json:"user"`
 	CollageURL string `json:"collageURL"`
+	AI         string `json:"ai"`
 }
 
 // TODO database?
@@ -72,6 +66,7 @@ func main() {
 	router.GET("/save", saveJSON)
 
 	router.POST("/playlists/", createPlaylist)
+	router.POST("/ai/", createAiResponse)
 
 	router.Run("localhost" + port)
 }
@@ -135,6 +130,25 @@ func loadJSON() {
 }
 
 // POST
+func createAiResponse(c *gin.Context) {
+	var requestData RequestData
+
+	if err := c.ShouldBindJSON(&requestData); err != nil {
+		// Handle error
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+	}
+	// Access the values from the request data
+	id := requestData.ID
+	token := requestData.Token
+
+	oauthToken := &oauth2.Token{
+		AccessToken: token,
+	}
+	//todo create a collage object
+	client := spotify.New(auth.Client(c, oauthToken))
+	c.String(http.StatusOK, ai.GenerateResponse(id, client))
+}
+
 func createPlaylist(c *gin.Context) {
 	var requestData RequestData
 
@@ -162,9 +176,14 @@ func createPlaylist(c *gin.Context) {
 		client := spotify.New(auth.Client(c, oauthToken))
 
 		imgurl := collage.GenerateCollage(id, client)
+		p, err := client.GetPlaylist(context.Background(), spotify.ID(id))
+		if err != nil {
+			log.Println(err)
+		}
+		ai := ai.GenerateResponse(id, client)
 
 		var newPlaylist = playlist{
-			ID: id, CollageURL: imgurl,
+			ID: id, Name: p.Name, User: p.Owner.DisplayName, CollageURL: imgurl, AI: ai,
 		}
 		playlists = append([]playlist{newPlaylist}, playlists...)
 		c.IndentedJSON(http.StatusCreated, newPlaylist)

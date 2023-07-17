@@ -5,7 +5,8 @@
           <img :src="playlist.collageURL">
         </a>
         <br>
-        <a :href="'https://open.spotify.com/playlist/'+playlist.id" target="_blank">Link</a>
+        <a :href="'https://open.spotify.com/playlist/'+playlist.id" target="_blank">{{ playlist.name }} by {{ playlist.user }}</a>
+        <p>{{ playlist.ai }}</p>
       </div>
     </div>
   </template>
