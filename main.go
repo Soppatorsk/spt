@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -35,46 +37,42 @@ type RequestData struct {
 	Token string `json:"token"`
 }
 
+// TODO use RequestData instead, very close
+type Collage struct {
+	playlistID string
+	client     *spotify.Client
+}
+
+func (c *Collage) GenerateCollage() string {
+	img := collage.GenerateCollage(c.playlistID, c.client)
+	return img
+}
+
 type playlist struct {
 	ID         string `json:"id"`
 	CollageURL string `json:"collageURL"`
 }
 
-/*
-	var playlists = []playlist{
-		{
-			ID:         "0",
-			CollageURL: "/img/test.jpg",
-		},
-		{
-			ID:         "3I3qR4YotZyh9R5BFSUx89",
-			CollageURL: "/img/3I3qR4YotZyh9R5BFSUx89.jpg",
-		},
-		{
-			ID:         "3okg2NywBjVFkFM9LNrWA2",
-			CollageURL: "/img/3okg2NywBjVFkFM9LNrWA2.jpg",
-		},
-		{
-			ID:         "2oLuXBMWzDQjbGNPThml5C",
-			CollageURL: "/img/2oLuXBMWzDQjbGNPThml5C.jpg",
-		},
-	}
-*/
-//TODO database?
+// TODO database?
 var playlists = []playlist{}
 
 func main() {
-
+	loadJSON()
 	router := gin.Default()
 	//static
 	router.Use(static.Serve("/", static.LocalFile("./vue-front/dist", true)))
 	//API
 	router.GET("/callback", completeAuth)
+
+	router.GET("/auth/", getAuth)
 	router.GET("/playlists/", getPlaylists)
 	router.GET("/playlists/:id", getPlaylistById)
 	router.GET("/img/:filename", getImg)
-	router.GET("/auth/", getAuth)
+
+	router.GET("/save", saveJSON)
+
 	router.POST("/playlists/", createPlaylist)
+
 	router.Run("localhost" + port)
 }
 
@@ -105,6 +103,37 @@ func getImg(c *gin.Context) {
 	c.File(imgPath)
 }
 
+func saveJSON(c *gin.Context) {
+	jsonData, err := json.Marshal(playlists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal JSON"})
+		return
+	}
+	err = ioutil.WriteFile("db.json", jsonData, 0644)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write JSNO file"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "JSON file saved."})
+}
+
+func loadJSON() {
+	data, err := ioutil.ReadFile("db.json")
+	if err != nil {
+		log.Println(err)
+	}
+
+	var p []playlist
+	err = json.Unmarshal(data, &p)
+	if err != nil {
+		log.Println(err)
+	}
+
+	playlists = p
+
+}
+
 // POST
 func createPlaylist(c *gin.Context) {
 	var requestData RequestData
@@ -118,30 +147,30 @@ func createPlaylist(c *gin.Context) {
 	id := requestData.ID
 	token := requestData.Token
 
-	ck, err := c.Request.Cookie("token")
-	if err != nil {
-		log.Fatal(err)
+	p, err := findPlaylistById(id)
+	if p == nil {
+
+		fmt.Println(id)
+		fmt.Println(token)
+
+		// id := "2oLuXBMWzDQjbGNPThml5C"
+
+		oauthToken := &oauth2.Token{
+			AccessToken: token,
+		}
+		//todo create a collage object
+		client := spotify.New(auth.Client(c, oauthToken))
+
+		imgurl := collage.GenerateCollage(id, client)
+
+		var newPlaylist = playlist{
+			ID: id, CollageURL: imgurl,
+		}
+		playlists = append([]playlist{newPlaylist}, playlists...)
+		c.IndentedJSON(http.StatusCreated, newPlaylist)
+	} else {
+		fmt.Println("Playlist already generated", err)
 	}
-	fmt.Println("server side ck" + ck.Value)
-
-	fmt.Println(id)
-	fmt.Println(token)
-
-	// id := "2oLuXBMWzDQjbGNPThml5C"
-
-	oauthToken := &oauth2.Token{
-		AccessToken: token,
-	}
-	//todo input validation
-	// create a collage object
-	client := spotify.New(auth.Client(c, oauthToken))
-	imgurl := collage.GenerateCollage(id, client)
-
-	var newPlaylist = playlist{
-		ID: id, CollageURL: imgurl,
-	}
-	playlists = append(playlists, newPlaylist)
-	c.IndentedJSON(http.StatusCreated, newPlaylist)
 }
 
 // POST/GET Helpers
@@ -158,10 +187,10 @@ func completeAuth(c *gin.Context) {
 
 	tok, err := auth.Token(c.Request.Context(), state, c.Request)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	if st := c.Request.FormValue("state"); st != state {
-		log.Fatalf("State mismatch: %s != %s\n", st, state)
+		log.Printf("State mismatch: %s != %s\n", st, state)
 	}
 
 	// use the token to get an authenticated client

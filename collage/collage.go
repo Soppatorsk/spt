@@ -15,27 +15,26 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-var (
-	generatedDir = "img"
-	tmpDir       = "tmp"
-)
-
 func GenerateCollage(playlistID string, client *spotify.Client) string {
+	var (
+		generatedDir = "img"
+		tmpDir       = "tmp"
+	)
 	os.Mkdir(generatedDir, 775)
 	os.Mkdir(tmpDir, 775)
-	tmpDir = tmpDir + "/" + playlistID
+	tmpDir = "tmp" + "/" + playlistID
 	os.Mkdir(tmpDir, 775)
 
 	playlist, err := client.GetPlaylistItems(context.Background(), spotify.ID(playlistID))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	fmt.Println("Downloading images...")
 	for i := 0; i <= playlist.Total/100; i++ {
 		playlist, err := client.GetPlaylistItems(context.Background(), spotify.ID(playlistID), spotify.Offset(i*100))
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 
 		//get track list from playlist
@@ -68,7 +67,7 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 	//TODO equivalent os call?
 	wcOutput, err := exec.Command("bash", "-c", "ls -l "+tmpDir+"/* | wc -l").Output()
 	if err != nil {
-		log.Fatal("Command execution failed:", err)
+		log.Println("Command execution failed:", err)
 	}
 
 	wcCount, err := strconv.Atoi(strings.TrimSpace(string(wcOutput)))
@@ -105,9 +104,9 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			// The command exited with a non-zero status code
 			errMsg := string(exitError.Stderr) // Error messages from stderr
-			log.Fatal("Command failed with error:", errMsg)
+			log.Println("Command failed with error:", errMsg)
 		} else {
-			log.Fatal("Command execution failed:", err)
+			log.Println("Command execution failed:", err)
 		}
 	}
 	fmt.Println("Command executed successfully!" + string(output))
