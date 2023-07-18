@@ -10,8 +10,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Soppatorsk/spt/ai"
 	"github.com/Soppatorsk/spt/collage"
@@ -23,10 +25,10 @@ import (
 )
 
 const (
-	hostDir     = "/spt" //ex. torsk.net/spt/ /spt as root //TODO global config file
-	port        = ":3000"
-	redirectURI = "https://torsk.net/spt/callback" 
-	//redirectURI = "http://localhost:3000" + hostDir + "/callback" //EDIT
+	hostDir = "" //ex. torsk.net/spt/ /spt as root //TODO global config file
+	port    = ":3000"
+	//redirectURI = "https://torsk.net/spt/callback"
+	redirectURI = "http://localhost:3000" + hostDir + "/callback" //EDIT
 )
 
 var (
@@ -62,6 +64,7 @@ func main() {
 	//API
 	router.GET(hostDir+"/callback", completeAuth)
 
+	// router.GET(hostDir+"/auth/", getAuthOld)
 	router.GET(hostDir+"/auth/", getAuth)
 	router.GET(hostDir+"/playlists/", getPlaylists)
 	router.GET(hostDir+"/playlists/:id", getPlaylistById)
@@ -90,10 +93,15 @@ func getPlaylists(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, playlists)
 }
 
-func getAuth(c *gin.Context) {
+func getAuthOld(c *gin.Context) {
 	url := auth.AuthURL(state)
 	// c.Redirect(http.StatusTemporaryRedirect, url)
 	c.String(http.StatusOK, url)
+}
+func getAuth(c *gin.Context) {
+	token, err := newAuth()
+	fmt.Print(err)
+	setTokenInCookie(c, token)
 }
 
 func getImg(c *gin.Context) {
@@ -224,6 +232,44 @@ func completeAuth(c *gin.Context) {
 	// fmt.Println(tok.AccessToken)
 	setTokenInCookie(c, tok.AccessToken)
 	c.Redirect(http.StatusTemporaryRedirect, hostDir+"/")
+}
+
+func newAuth() (string, error) {
+	spotifyKey := os.Getenv("SPOTIFY_KEY")
+	data := url.Values{}
+	data.Set("grant_type", "client_credentials")
+	payload := strings.NewReader(data.Encode())
+	req, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", payload)
+	if err != nil {
+		return "", err
+	}
+	authHeader := fmt.Sprintf("Basic %s", spotifyKey)
+	req.Header.Set("Authorization", authHeader)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	// Parse the JSON response
+	var response struct {
+		AccessToken string `json:"access_token"`
+	}
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return "", err
+	}
+
+	return response.AccessToken, nil
 }
 
 func generateState() (string, error) {

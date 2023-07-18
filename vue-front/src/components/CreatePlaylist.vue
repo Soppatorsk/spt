@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="playlistInput">
         <form @submit.prevent="handleSubmit">
             <label>Playlist Link:</label>
             <input type="text" required v-model="id">
@@ -15,6 +15,9 @@
 import VueCookies from 'vue-cookies'
 export default {
     methods: {
+        init() {
+
+        },
         handleSubmit() {
             this.requestStatus = "Loading..."
             console.log('form submit ' + this.id)
@@ -39,6 +42,7 @@ export default {
                 console.log(data);
                 //TODO auto call /playlists
                 this.requestStatus = "Success! Refresh the page"
+                window.location.reload()
           })
           .catch(error => {
             console.error(error);
@@ -60,10 +64,24 @@ data() {
         requestStatus: '',
         code500: ''
     }
-}
+},
+ mounted() {
+        fetch(this.$hostname+'auth/')
+        .then(res => res.text())
+        .then(data => this.auth = data)
+        .catch(err => {
+            console.log(err.message)
+            this.errorMessage = err.message
+        })
+    }
+
 }
 </script>
 
 <style>
 
+.playlistInput {
+  margin-bottom: 5vh;
+
+}
 </style>

@@ -6,6 +6,7 @@
 
 <script>
 //TODO green if authorized else no 
+//Old Auth used for user data, not needed, clean up later
 export default {
 
     data() {

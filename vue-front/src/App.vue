@@ -1,8 +1,6 @@
 <template>
   <div>
     <h1>torsk.net/spt</h1>
-    <SpotifyAuth></SpotifyAuth>
-    <ButtonTestVue></ButtonTestVue>
     <CreatePlaylistVue></CreatePlaylistVue>
     <PlaylistGallery></PlaylistGallery>
   </div>
@@ -11,13 +9,11 @@
 <script>
 import CreatePlaylistVue from './components/CreatePlaylist.vue'
 import PlaylistGallery from './components/PlaylistGallery.vue'
-import SpotifyAuth from './components/SpotifyAuth.vue'
 
 export default {
   name: 'App',
   components: {
     CreatePlaylistVue,
-    SpotifyAuth,
     PlaylistGallery,
   }
 }
