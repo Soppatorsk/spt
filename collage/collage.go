@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	hostDir = "/spt"
+	//hostDir = "/spt"
+	hostDir = ""
 )
 
 func GenerateCollage(playlistID string, client *spotify.Client) string {
@@ -33,6 +34,11 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 		log.Println(err)
 	}
 
+	artQuality := 2
+	if playlist.Total <= 100 {
+		artQuality = 1
+	}
+
 	fmt.Println("Downloading images...")
 	for i := 0; i <= playlist.Total/100; i++ {
 		playlist, err := client.GetPlaylistItems(context.Background(), spotify.ID(playlistID), spotify.Offset(i*100))
@@ -47,7 +53,7 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 		for _, item := range items {
 			if len(item.Track.Track.Album.Images) > 2 {
 				//TODO on few tracks, use higher res
-				dl := item.Track.Track.Album.Images[2].URL
+				dl := item.Track.Track.Album.Images[artQuality].URL
 
 				_, dlErr := os.Stat(tmpDir + "/" + dl[25:] + ".jpg")
 				if dlErr == nil {
@@ -100,7 +106,11 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 	//Note: Up the disk limit on ImageMagicks policy in /etc/ImageMagic-6/policy.xml
 	finalImage := generatedDir + "/" + playlistID + ".jpg"
 	fmt.Println(finalImage)
-	cmd := exec.Command("bash", "-c", "montage "+tmpDir+"/* -geometry 64x64+0+0 "+finalImage)
+	res := "64x64"
+	if artQuality == 1 {
+		res = "300x300"
+	}
+	cmd := exec.Command("bash", "-c", "montage "+tmpDir+"/* -geometry "+res+"+0+0 "+finalImage)
 
 	output, err := cmd.Output()
 
@@ -115,7 +125,7 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 	}
 	fmt.Println("Command executed successfully!" + string(output))
 
-	return hostDir+"/" + finalImage
+	return hostDir + "/" + finalImage
 }
 
 func downloadImage(url string, tmpDir string) error {
