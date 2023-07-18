@@ -15,6 +15,10 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
+const (
+	hostDir = "/spt"
+)
+
 func GenerateCollage(playlistID string, client *spotify.Client) string {
 	var (
 		generatedDir = "img"

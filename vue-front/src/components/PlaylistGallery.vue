@@ -24,7 +24,7 @@
     },
     methods: {
       loadPlaylists() {
-        fetch("/playlists/")
+        fetch(this.$hostname+"playlists/")
         .then(res => res.json())
         .then(data => { 
         this.playlists = data;

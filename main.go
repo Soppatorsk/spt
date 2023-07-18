@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,8 +23,9 @@ import (
 )
 
 const (
+	hostDir     = "" //ex. torsk.net/spt/ /spt as root //TODO global config file
 	port        = ":3000"
-	redirectURI = "http://localhost:3000/callback"
+	redirectURI = "http://localhost:3000" + hostDir + "/callback"
 )
 
 var (
@@ -31,7 +34,7 @@ var (
 	auth         = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate))
 	ch           = make(chan *spotify.Client)
 	tk           = make(chan *oauth2.Token)
-	state        = "abc123" //TODO generate
+	state, err   = generateState()
 )
 
 type RequestData struct {
@@ -56,17 +59,17 @@ func main() {
 	//static
 	router.Use(static.Serve("/", static.LocalFile("./vue-front/dist", true)))
 	//API
-	router.GET("/callback", completeAuth)
+	router.GET(hostDir+"/callback", completeAuth)
 
-	router.GET("/auth/", getAuth)
-	router.GET("/playlists/", getPlaylists)
-	router.GET("/playlists/:id", getPlaylistById)
-	router.GET("/img/:filename", getImg)
+	router.GET(hostDir+"/auth/", getAuth)
+	router.GET(hostDir+"/playlists/", getPlaylists)
+	router.GET(hostDir+"/playlists/:id", getPlaylistById)
+	router.GET(hostDir+"/img/:filename", getImg)
 
-	router.GET("/save", saveJSON)
+	router.GET(hostDir+"/save", saveJSON)
 
-	router.POST("/playlists/", createPlaylist)
-	router.POST("/ai/", createAiResponse)
+	router.POST(hostDir+"/playlists/", createPlaylist)
+	router.POST(hostDir+"/ai/", createAiResponse)
 
 	router.Run("localhost" + port)
 }
@@ -188,6 +191,7 @@ func createPlaylist(c *gin.Context) {
 		playlists = append([]playlist{newPlaylist}, playlists...)
 		c.IndentedJSON(http.StatusCreated, newPlaylist)
 	} else {
+		c.IndentedJSON(http.StatusInternalServerError, "Playlist already generated")
 		fmt.Println("Playlist already generated", err)
 	}
 }
@@ -221,11 +225,27 @@ func completeAuth(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
+func generateState() (string, error) {
+	// Adjust the length of the state string as needed
+	const stateLength = 32
+
+	// Generate a random byte slice of the desired length
+	stateBytes := make([]byte, stateLength)
+	if _, err := rand.Read(stateBytes); err != nil {
+		return "", err
+	}
+
+	// Encode the byte slice as a base64 string
+	state := base64.URLEncoding.EncodeToString(stateBytes)
+
+	return state, nil
+}
+
 func setTokenInCookie(c *gin.Context, token string) {
 	cookie := &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		Path:     "/",
+		Path:     hostDir + "/",
 		HttpOnly: false,
 	}
 	http.SetCookie(c.Writer, cookie)
