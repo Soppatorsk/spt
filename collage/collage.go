@@ -24,10 +24,9 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 		generatedDir = "img"
 		tmpDir       = "tmp"
 	)
-	os.Mkdir(generatedDir, 775)
-	os.Mkdir(tmpDir, 775)
+	os.MkdirAll(generatedDir, 0775)
 	tmpDir = "tmp" + "/" + playlistID
-	os.Mkdir(tmpDir, 775)
+	os.MkdirAll(tmpDir, 0775)
 
 	playlist, err := client.GetPlaylistItems(context.Background(), spotify.ID(playlistID))
 	if err != nil {
@@ -116,7 +115,7 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 	}
 	fmt.Println("Command executed successfully!" + string(output))
 
-	return "/" + finalImage
+	return hostDir+"/" + finalImage
 }
 
 func downloadImage(url string, tmpDir string) error {

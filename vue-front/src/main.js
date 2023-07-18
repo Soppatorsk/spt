@@ -3,6 +3,6 @@ import App from './App.vue';
 import VueCookies from 'vue-cookies';
 
 const app = createApp(App);
-app.config.globalProperties.$hostname = ''
+app.config.globalProperties.$hostname = '/spt/'
 app.use(VueCookies);
 app.mount('#app');

@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	hostDir     = "" //ex. torsk.net/spt/ /spt as root //TODO global config file
+	hostDir     = "/spt" //ex. torsk.net/spt/ /spt as root //TODO global config file
 	port        = ":3000"
-	redirectURI = "http://localhost:3000" + hostDir + "/callback"
+	redirectURI = "https://torsk.net/spt/callback" 
+	//redirectURI = "http://localhost:3000" + hostDir + "/callback" //EDIT
 )
 
 var (
@@ -57,7 +58,7 @@ func main() {
 	loadJSON()
 	router := gin.Default()
 	//static
-	router.Use(static.Serve("/", static.LocalFile("./vue-front/dist", true)))
+	router.Use(static.Serve(hostDir+"/", static.LocalFile("./vue-front/dist", true)))
 	//API
 	router.GET(hostDir+"/callback", completeAuth)
 
@@ -222,7 +223,7 @@ func completeAuth(c *gin.Context) {
 
 	// fmt.Println(tok.AccessToken)
 	setTokenInCookie(c, tok.AccessToken)
-	c.Redirect(http.StatusTemporaryRedirect, "/")
+	c.Redirect(http.StatusTemporaryRedirect, hostDir+"/")
 }
 
 func generateState() (string, error) {
