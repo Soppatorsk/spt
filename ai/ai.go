@@ -32,13 +32,16 @@ func GenerateResponse(id string, client *spotify.Client) string {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 
 	instructions := "Your task is to roast the users spotify playlist, tease and make fun of user and draw far-fetched conclusions on their music taste. User will provide a playlist title and some samples song - artist"
-	playlistInfo := "TITLE: {TITLE} \nSAMPLES: {SAMPLES}"
+	//instructions := "Mock and make fun of the user, don't hold back and absolutely roast the user. Feel free to be rude and condecending and belittle user"
+	// instructions := "Make a character portrayal of the user based on their playlist, be mean and judgemental and speak nothing but the most brutal truth. Talk about the user and not about the music in itself. Make guesses and far-fetched deductions based on the available information"
+	playlistInfo := "TITLE: {TITLE} \nUSER: {USER} \nSAMPLES: {SAMPLES}"
 
 	p, err := client.GetPlaylist(context.Background(), spotify.ID(id))
 	if err != nil {
 		log.Println(err)
 	}
 	playlistInfo = strings.Replace(playlistInfo, "{TITLE}", p.Name, 1)
+	playlistInfo = strings.Replace(playlistInfo, "{USER}", p.Owner.DisplayName, 1)
 
 	pi, err := client.GetPlaylistItems(context.Background(), spotify.ID(id))
 	if err != nil {

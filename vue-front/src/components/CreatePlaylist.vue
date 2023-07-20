@@ -12,7 +12,6 @@
 </template>
 
 <script>
-import VueCookies from 'vue-cookies'
 export default {
     methods: {
         init() {
@@ -22,17 +21,11 @@ export default {
             this.requestStatus = "Loading..."
             console.log('form submit ' + this.id)
             const parsedId = this.parseSpotifyLink(this.id)
-            const token = VueCookies.get("token")
-            fetch(this.$hostname+'playlists/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ id: parsedId, token: token })
+            fetch(this.$hostname+'playlist/'+parsedId, {
           })
           .then(response => {
             if (response.status == 500) {
-                this.requestStatus = "Invalid or duplicate spotify link"
+                this.requestStatus = "Playlist private, invalid or duplicate"
                 throw new Error("Invalid or duplicate link")
             } else {
                 response = response.json()
@@ -62,17 +55,9 @@ data() {
     return {
         id: '',
         requestStatus: '',
-        code500: ''
     }
 },
  mounted() {
-        fetch(this.$hostname+'auth/')
-        .then(res => res.text())
-        .then(data => this.auth = data)
-        .catch(err => {
-            console.log(err.message)
-            this.errorMessage = err.message
-        })
     }
 
 }

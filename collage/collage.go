@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	//hostDir = "/spt"
+	//hostDir = "/spt/"
 	hostDir = ""
 )
 
@@ -125,7 +125,7 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 	}
 	fmt.Println("Command executed successfully!" + string(output))
 
-	return hostDir + "/" + finalImage
+	return hostDir + finalImage
 }
 
 func downloadImage(url string, tmpDir string) error {
