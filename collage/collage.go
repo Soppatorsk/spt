@@ -59,10 +59,10 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 				if dlErr == nil {
 					//
 				} else if os.IsNotExist(dlErr) {
-					fmt.Println("Downloading " + dl)
+					//fmt.Println("Downloading " + dl)
 					downloadImage(dl, tmpDir)
 				} else {
-					fmt.Println("dl Err:", dlErr)
+					log.Println("dl Err:", dlErr)
 				}
 			} else {
 				//fmt.Println("Probably user local file, skipping")
@@ -88,13 +88,13 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 			for j := 0; j < n; j++ {
 				files, err := filepath.Glob(tmpDir + "/*")
 				if err != nil || len(files) == 0 {
-					fmt.Println("Error:", err)
+					log.Println("Error:", err)
 					break
 				}
 				filePath := files[len(files)-1]
 				err = os.Remove(filePath)
 				if err != nil {
-					fmt.Println(err)
+					log.Println(err)
 				}
 			}
 			break
@@ -105,7 +105,6 @@ func GenerateCollage(playlistID string, client *spotify.Client) string {
 	//Create the montage/collage
 	//Note: Up the disk limit on ImageMagicks policy in /etc/ImageMagic-6/policy.xml
 	finalImage := generatedDir + "/" + playlistID + ".jpg"
-	fmt.Println(finalImage)
 	res := "64x64"
 	if artQuality == 1 {
 		res = "300x300"

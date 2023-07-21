@@ -15,6 +15,7 @@ import (
 
 	"github.com/Soppatorsk/spt/ai"
 	"github.com/Soppatorsk/spt/collage"
+	"github.com/Soppatorsk/spt/color"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/zmb3/spotify/v2"
@@ -39,6 +40,7 @@ type playlist struct {
 	User       string `json:"user"`
 	CollageURL string `json:"collageURL"`
 	AI         string `json:"ai"`
+	Color      string `json:"color"`
 }
 
 // TODO database?
@@ -50,6 +52,7 @@ func main() {
 	//static/frontend
 	router.Use(static.Serve(hostDir+"/", static.LocalFile("./vue-front/dist", true)))
 
+	router.GET(hostDir+"/test/:id", test)
 	//Get all public lists
 	router.GET(hostDir+"/playlists/", getPlaylists)
 	//Get image
@@ -66,6 +69,13 @@ func main() {
 	router.GET("/collage/:id", getCollage)
 
 	router.Run("localhost" + port)
+}
+
+func test(c *gin.Context) {
+	id := c.Param("id")
+	client := getClient()
+	s := color.Generate(id, client)
+	c.String(http.StatusOK, s)
 }
 
 // GET
@@ -151,6 +161,7 @@ func createPlaylist(c *gin.Context) {
 			log.Println(err)
 		}
 		ai := ai.GenerateResponse(id, client)
+		color := color.PlaylistColor(id, client)
 
 		var newPlaylist = playlist{
 			ID:         id,
@@ -158,6 +169,7 @@ func createPlaylist(c *gin.Context) {
 			User:       p.Owner.DisplayName,
 			CollageURL: imgurl,
 			AI:         ai,
+			Color:      color,
 		}
 		playlists = append([]playlist{newPlaylist}, playlists...)
 		saveJSON(c)

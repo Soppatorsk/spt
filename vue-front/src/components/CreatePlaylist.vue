@@ -14,9 +14,6 @@
 <script>
 export default {
     methods: {
-        init() {
-
-        },
         handleSubmit() {
             this.requestStatus = "Loading..."
             console.log('form submit ' + this.id)
@@ -57,8 +54,7 @@ data() {
         requestStatus: '',
     }
 },
- mounted() {
-    }
+
 
 }
 </script>

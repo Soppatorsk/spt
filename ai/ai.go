@@ -31,9 +31,9 @@ func GenerateResponse(id string, client *spotify.Client) string {
 	url := "https://api.openai.com/v1/chat/completions"
 	apiKey := os.Getenv("OPENAI_API_KEY")
 
-	instructions := "Your task is to roast the users spotify playlist, tease and make fun of user and draw far-fetched conclusions on their music taste. User will provide a playlist title and some samples song - artist"
+	//instructions := "Your task is to roast the users spotify playlist, tease and make fun of user and draw far-fetched conclusions on their music taste. User will provide a playlist title and some samples song - artist"
 	//instructions := "Mock and make fun of the user, don't hold back and absolutely roast the user. Feel free to be rude and condecending and belittle user"
-	// instructions := "Make a character portrayal of the user based on their playlist, be mean and judgemental and speak nothing but the most brutal truth. Talk about the user and not about the music in itself. Make guesses and far-fetched deductions based on the available information"
+	instructions := "Make a character portrayal of the user based on their playlist, be mean and judgemental and speak nothing but the most brutal truth. Talk about the user and not about the music in itself. Make guesses and far-fetched deductions based on the available information. Make it a short one liner response."
 	playlistInfo := "TITLE: {TITLE} \nUSER: {USER} \nSAMPLES: {SAMPLES}"
 
 	p, err := client.GetPlaylist(context.Background(), spotify.ID(id))
