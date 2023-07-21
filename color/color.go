@@ -79,18 +79,22 @@ func PlaylistColor(id string, client *spotify.Client) string {
 
 	items := p.Items
 	iterated := 0
+	ids := ""
 	for i, item := range items {
-		f, err := client.GetAudioFeatures(context.Background(), item.Track.Track.ID)
-		if err == nil {
-			if f != nil {
-				r = r + int(f[0].Energy*255)
-				g = g + int(f[0].Danceability*255)
-				b = b + int(255-(f[0].Valence*255))
-				i++
-				iterated = i
-			}
+		ids = ids + (string(item.Track.Track.ID) + ",")
+		fmt.Println(ids)
+		f, err := client.GetAudioFeatures(context.Background(), spotify.ID(ids))
+		if err != nil {
+			log.Println(err)
 		}
+		r = r + int(f[i].Energy*255)
+		fmt.Println(r)
+		g = g + int(f[i].Danceability*255)
+		b = b + int(255-(f[i].Valence*255))
+		iterated = i
+		i++
 	}
+
 	fmt.Println(iterated)
 	r = r / iterated
 	g = g / iterated
