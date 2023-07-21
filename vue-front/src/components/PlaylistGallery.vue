@@ -1,6 +1,6 @@
 <template>
     <div id="gallery">
-      <div v-for="playlist in playlists" :key="playlist" class="image-item">
+      <div :style="'background-color:' + playlist.color" v-for="playlist in playlists" :key="playlist" class="galleryItem">
         <a :href="playlist.collageURL">
           <img :src="playlist.collageURL">
         </a>
@@ -39,15 +39,21 @@
   
   <style>
   #gallery {
+    margin:auto;
     display: flex;
     flex-wrap: wrap;
   }
   #gallery div {
-    width:20vw;
-    margin:0 2vw;
+    width:22vw;
+    margin:1vw 1vw;
+  }
+
+  #gallery div p {
+    margin:1vw;
   }
 
   #gallery div img {
+    margin:1vw;
     width:20vw
   }
   </style>
