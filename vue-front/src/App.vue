@@ -1,6 +1,12 @@
 <template>
   <div>
+    <SptHeader></SptHeader>
     <h1>torsk.net/spt</h1>
+    <div id="colorLegend">
+      <p style="color:red">Energy: █████</p>
+      <p style="color:green">Danceability: █████</p>
+      <p style="color:blue">Valence (inverse): █████</p>
+    </div>
     <CreatePlaylistVue></CreatePlaylistVue>
     <PlaylistGallery></PlaylistGallery>
   </div>
@@ -9,12 +15,14 @@
 <script>
 import CreatePlaylistVue from './components/CreatePlaylist.vue'
 import PlaylistGallery from './components/PlaylistGallery.vue'
+import SptHeader from './components/sptHeader.vue'
 
 export default {
   name: 'App',
   components: {
     CreatePlaylistVue,
     PlaylistGallery,
+    SptHeader,
   }
 }
 </script>
@@ -37,4 +45,14 @@ a {
   margin-top: 60px;
 
 }
+
+#colorLegend {
+    text-align: right;
+    font-size: 0.7em;
+    position: absolute;
+    top: 7vh;
+    left: 90%;
+}
 </style>
+
+
