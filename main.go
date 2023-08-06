@@ -25,12 +25,13 @@ import (
 
 const (
 	hostDir = "" //ex. torsk.net/spt/ /spt as root //TODO global config file
-	port    = ":3000"
 	//redirectURI = "https://torsk.net/spt/callback"
 	redirectURI = "http://localhost:3000" + hostDir + "/callback" //EDIT
 )
 
 var (
+	// port    = os.Getenv("PORT")
+	port = "3000"
 	auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate))
 )
 
@@ -66,9 +67,9 @@ func main() {
 	//Get/Create response only
 	router.GET(hostDir+"/ai/:id", getAiResponse)
 	//Get/create collage only
-	router.GET("/collage/:id", getCollage)
+	router.GET(hostDir+"/collage/:id", getCollage)
 
-	router.Run("localhost" + port)
+	router.Run("0.0.0.0:" + port)
 }
 
 func test(c *gin.Context) {
