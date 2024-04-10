@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	hostDir = "" //ex. torsk.net/spt/ /spt as root //TODO global config file
+	hostDir = "/spt" //ex. torsk.net/spt/ /spt as root //TODO global config file
 	//redirectURI = "https://torsk.net/spt/callback"
 	redirectURI = "http://localhost:3000" + hostDir + "/callback" //EDIT
 )
