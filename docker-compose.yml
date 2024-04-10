@@ -1,0 +1,9 @@
+version: '3'
+services:
+  spt:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      SPOTIFY_KEY: REDACTED
+      OPENAI_API_KEY: REDACTED
